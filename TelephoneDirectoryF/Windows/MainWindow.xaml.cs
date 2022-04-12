@@ -14,7 +14,7 @@ namespace TelephoneDirectoryF
     /// </summary>
     public partial class MainWindow : Window
     {
-        TelephoneDirectoryEntities _context;
+        public TelephoneDirectoryEntities _context;
         RecordList _records;
         bool _sorted;
 
@@ -22,7 +22,7 @@ namespace TelephoneDirectoryF
         {
             InitializeComponent();
             _context = new TelephoneDirectoryEntities();
-            _records = new RecordList(_context);
+            _records = new RecordList(_context.Records.ToList());
             _sorted = false;
 
             ListBoxRecords.ItemsSource = _records;
@@ -30,24 +30,33 @@ namespace TelephoneDirectoryF
 
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
-            if (!IsPhoneNumber(TextBoxPhoneNumber.Text))
+            if (AddRecord(TextBoxName.Text, TextBoxPhoneNumber.Text, TextBoxAddress.Text,
+                      TextBoxSchedule.Text, TextBoxField.Text)) return;
+
+            Load();
+        }
+
+        public bool AddRecord(string name, string phoneNumber, string address, string schedule, string fieldActivity)
+        {
+            if (!IsPhoneNumber(phoneNumber))
             {
                 MessageBox.Show("Некорректный номер телефона!");
-                return;
+                return false;
             }
 
             Records newRecord = new Records()
             {
-                Name = TextBoxName.Text,
-                PhoneNumber = TextBoxPhoneNumber.Text.TrimStart('+'),
-                Address = TextBoxAddress.Text,
-                Schedule = TextBoxSchedule.Text,
-                FieldActivity = TextBoxField.Text
+                Name = name,
+                PhoneNumber = phoneNumber.TrimStart('+'),
+                Address = address,
+                Schedule = schedule,
+                FieldActivity = fieldActivity
             };
 
             _context.Records.Add(newRecord);
             _context.SaveChanges();
-            Load();
+
+            return true;
         }
 
         private void BtnUpdate_Click(object sender, RoutedEventArgs e)
@@ -60,20 +69,28 @@ namespace TelephoneDirectoryF
 
             Records selectedRecord = (Records)ListBoxRecords.SelectedItem;
 
-            if (!IsPhoneNumber(TextBoxPhoneNumber.Text))
-            {
-                MessageBox.Show("Некорректный номер телефона!");
-                return;
-            }
-
-            selectedRecord.Name = TextBoxName.Text;
-            selectedRecord.PhoneNumber = TextBoxPhoneNumber.Text.TrimStart('+');
-            selectedRecord.Address = TextBoxAddress.Text;
-            selectedRecord.Schedule = TextBoxSchedule.Text;
-            selectedRecord.FieldActivity = TextBoxField.Text;
+            if (UpdateRecord(ref selectedRecord, TextBoxName.Text, TextBoxPhoneNumber.Text, TextBoxAddress.Text,
+                      TextBoxSchedule.Text, TextBoxField.Text)) return;
 
             _context.SaveChanges();
             Load();
+        }
+
+        public bool UpdateRecord(ref Records selectedRecord, string name, string phoneNumber, string address, string schedule, string fieldActivity)
+        {
+            if (!IsPhoneNumber(phoneNumber))
+            {
+                MessageBox.Show("Некорректный номер телефона!");
+                return false;
+            }
+
+            selectedRecord.Name = name;
+            selectedRecord.PhoneNumber = phoneNumber.TrimStart('+');
+            selectedRecord.Address = address;
+            selectedRecord.Schedule = schedule;
+            selectedRecord.FieldActivity = fieldActivity;
+
+            return true;
         }
 
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
@@ -86,9 +103,16 @@ namespace TelephoneDirectoryF
 
             Records record = (Records)ListBoxRecords.SelectedItem;
 
-            _context.Records.Remove(record);
+            DeleteRecord(ref record);
             _context.SaveChanges();
             Load();
+        }
+
+        public bool DeleteRecord(ref Records record)
+        {
+            _context.Records.Remove(record);
+
+            return true;
         }
 
         private void BtnSort_Click(object sender, RoutedEventArgs e)
@@ -143,18 +167,18 @@ namespace TelephoneDirectoryF
 
         private void Load()
         {
-            _records = new RecordList(_context);
+            _records = new RecordList(_context.Records.ToList());
             ListBoxRecords.ItemsSource = _records;
         }
     }
 
-    class RecordList : IEnumerable<Records>
+    public class RecordList : IEnumerable<Records>
     {
         public List<Records> records { get; set; }
 
-        public RecordList(TelephoneDirectoryEntities context)
+        public RecordList(List<Records> context)
         {
-            records = context.Records.ToList();
+            records = context;
         }
 
         public List<Records> SortByFieldAcitivity()
